@@ -1,0 +1,32 @@
+[project]
+name = "voice-os-agent"
+version = "0.1.0"
+description = "Голосовой агент для управления операционной системой Windows"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "pyttsx3>=2.90",
+    "SpeechRecognition>=3.10",
+    "sounddevice>=0.4.6",
+    "numpy>=1.24",
+    "pycaw>=20230407; sys_platform == 'win32'",
+    "comtypes>=1.2; sys_platform == 'win32'",
+]
+
+[project.optional-dependencies]
+audio = ["PyAudio>=0.2.13"]
+dev = ["pytest>=7.0"]
+
+[project.scripts]
+voice-agent = "voice_os_agent.app:main"
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

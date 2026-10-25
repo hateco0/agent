@@ -1,0 +1,36 @@
+{
+  "language": "ru",
+  "voice": {
+    "enabled": true,
+    "wake_word": "ассистент",
+    "tts_rate": 180,
+    "asr_language": "ru-RU"
+  },
+  "security": {
+    "confirm_dangerous": true,
+    "shell_whitelist": [
+      "ipconfig",
+      "systeminfo",
+      "tasklist",
+      "hostname",
+      "whoami",
+      "date",
+      "time",
+      "ver",
+      "driverquery",
+      "route",
+      "arp",
+      "netstat",
+      "getmac"
+    ]
+  },
+  "llm": {
+    "enabled": true,
+    "provider": "ollama",
+    "base_url": "http://127.0.0.1:11434",
+    "model": "qwen2.5:7b-instruct",
+    "api_key": "",
+    "timeout": 8.0,
+    "temperature": 0.0
+  }
+}
