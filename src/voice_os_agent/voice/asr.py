@@ -4,9 +4,10 @@ from .microphone import SoundDeviceMicrophone
 
 
 class SpeechListener:
-    def __init__(self, language: str = "ru-RU", device_index: int | None = None) -> None:
+    def __init__(self, language: str = "ru-RU", device_index: int | None = None, device_name: str | None = None) -> None:
         self.language = language
         self.device_index = device_index
+        self.device_name = device_name
         self._recognizer = None
         self._error = ""
 
@@ -35,6 +36,15 @@ class SpeechListener:
             try:
                 if self.device_index is not None and self.device_index >= 0:
                     return sr.Microphone(device_index=self.device_index)
+                if self.device_name:
+                    try:
+                        from core import audio_devices
+
+                        for d in audio_devices.list_input_devices():
+                            if d.get("name") == self.device_name and d.get("index") is not None:
+                                return sr.Microphone(device_index=int(d["index"]))
+                    except Exception:
+                        pass
             except Exception:
                 pass
             return sr.Microphone()
@@ -45,6 +55,15 @@ class SpeechListener:
         try:
             if self.device_index is not None and self.device_index >= 0:
                 return SoundDeviceMicrophone(device=self.device_index)
+            if self.device_name:
+                try:
+                    from core import audio_devices
+
+                    for d in audio_devices.list_input_devices():
+                        if d.get("name") == self.device_name and d.get("index") is not None:
+                            return SoundDeviceMicrophone(device=int(d["index"]))
+                except Exception:
+                    pass
             return SoundDeviceMicrophone()
         except Exception:
             return None
@@ -99,6 +118,9 @@ class SpeechListener:
         if not self._error:
             self._error = "Микрофон недоступен"
         return None
+
+
+SpeechRecognizer = SpeechListener
 
 
 SpeechRecognizer = SpeechListener

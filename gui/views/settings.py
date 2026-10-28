@@ -32,14 +32,30 @@ class SettingsView(ctk.CTkFrame):
         ctk.CTkLabel(audio, text="Микрофон:").grid(row=1, column=0, padx=10, pady=5, sticky="w")
         ins = audio_devices.list_input_devices()
         self.in_combo = ctk.CTkComboBox(audio, values=[d["name"] for d in ins])
-        if ins:
-            self.in_combo.set(ins[0]["name"])
+        try:
+            def_in = audio_devices.get_default_input_name()
+            names_in = [d["name"] for d in ins]
+            if def_in and def_in in names_in:
+                self.in_combo.set(def_in)
+            elif ins:
+                self.in_combo.set(ins[0]["name"])
+        except Exception:
+            if ins:
+                self.in_combo.set(ins[0]["name"])
         self.in_combo.grid(row=1, column=1, sticky="ew", padx=10, pady=5)
         ctk.CTkLabel(audio, text="Устройство вывода:").grid(row=2, column=0, padx=10, pady=5, sticky="w")
         outs = audio_devices.list_output_devices()
         self.out_combo = ctk.CTkComboBox(audio, values=[d["name"] for d in outs])
-        if outs:
-            self.out_combo.set(outs[0]["name"])
+        try:
+            def_out = audio_devices.get_default_output_name()
+            names_out = [d["name"] for d in outs]
+            if def_out and def_out in names_out:
+                self.out_combo.set(def_out)
+            elif outs:
+                self.out_combo.set(outs[0]["name"])
+        except Exception:
+            if outs:
+                self.out_combo.set(outs[0]["name"])
         self.out_combo.grid(row=2, column=1, sticky="ew", padx=10, pady=5)
 
         # Голос

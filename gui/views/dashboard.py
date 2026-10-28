@@ -47,12 +47,27 @@ class Dashboard(ctk.CTkFrame):
         self.mic_frame = ctk.CTkFrame(self)
         self.mic_frame.grid(row=2, column=0, sticky="ew", padx=20, pady=10)
         self.mic_frame.grid_columnconfigure(1, weight=1)
-        ctk.CTkLabel(self.mic_frame, text="Микрофон", font=ctk.CTkFont(weight="bold")).grid(row=0, column=0, columnspan=3, sticky="w", padx=10, pady=5)
+        ctk.CTkLabel(self.mic_frame, text="Микрофон", font=ctk.CTkFont(weight="bold")).grid(row=0, column=0, columnspan=4, sticky="w", padx=10, pady=5)
         ctk.CTkLabel(self.mic_frame, text="Устройство:").grid(row=1, column=0, padx=10)
-        self.mic_combo = ctk.CTkComboBox(self.mic_frame, values=[d["name"] for d in audio_devices.list_input_devices()])
+        ins = audio_devices.list_input_devices()
+        self.mic_combo = ctk.CTkComboBox(self.mic_frame, values=[d["name"] for d in ins])
+        try:
+            def_name = audio_devices.get_default_input_name()
+            names = [d["name"] for d in ins]
+            if def_name and def_name in names:
+                self.mic_combo.set(def_name)
+            elif ins:
+                self.mic_combo.set(ins[0]["name"])
+        except Exception:
+            if ins:
+                self.mic_combo.set(ins[0]["name"])
         self.mic_combo.grid(row=1, column=1, sticky="ew", padx=10)
         self.test_mic_btn = ctk.CTkButton(self.mic_frame, text="Проверить микрофон", width=160, command=self.toggle_mic_test)
         self.test_mic_btn.grid(row=1, column=2, padx=10)
+        self.monitor_var = ctk.StringVar(value="on")
+        self.monitor_switch = ctk.CTkSwitch(self.mic_frame, text="Слышать себя при проверке", variable=self.monitor_var, onvalue="on", offvalue="off")
+        self.monitor_switch.select()
+        self.monitor_switch.grid(row=1, column=3, padx=10)
         ctk.CTkLabel(self.mic_frame, text="Уровень:").grid(row=2, column=0, padx=10, pady=5)
         self.level_bar = ctk.CTkProgressBar(self.mic_frame)
         self.level_bar.set(0)

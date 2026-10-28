@@ -7,8 +7,11 @@ def list_input_devices():
     items = []
     try:
         for i, d in enumerate(sd.query_devices()):
-            if d.get("max_input_channels", 0) > 0:
-                items.append({"index": i, "name": d.get("name", f"Device {i}")})
+            try:
+                if d.get("max_input_channels", 0) > 0:
+                    items.append({"index": i, "name": str(d.get("name", f"Device {i}"))})
+            except Exception:
+                continue
     except Exception:
         pass
     if not items:
@@ -20,8 +23,11 @@ def list_output_devices():
     items = []
     try:
         for i, d in enumerate(sd.query_devices()):
-            if d.get("max_output_channels", 0) > 0:
-                items.append({"index": i, "name": d.get("name", f"Device {i}")})
+            try:
+                if d.get("max_output_channels", 0) > 0:
+                    items.append({"index": i, "name": str(d.get("name", f"Device {i}"))})
+            except Exception:
+                continue
     except Exception:
         pass
     if not items:
@@ -47,3 +53,28 @@ def get_default_output():
     except Exception:
         pass
     return None
+
+
+def get_default_input_name():
+    try:
+        idx = get_default_input()
+        if idx is not None:
+            devs = sd.query_devices()
+            if idx < len(devs):
+                return str(devs[idx].get("name", ""))
+    except Exception:
+        pass
+    return ""
+
+
+def get_default_output_name():
+    try:
+        idx = get_default_output()
+        if idx is not None:
+            devs = sd.query_devices()
+            if idx < len(devs):
+                return str(devs[idx].get("name", ""))
+    except Exception:
+        pass
+    return ""
+
