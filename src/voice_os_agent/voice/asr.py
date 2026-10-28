@@ -4,14 +4,14 @@ from .microphone import SoundDeviceMicrophone
 
 
 class SpeechListener:
-    def __init__(self, language: str = "ru-RU") -> None:
+    def __init__(self, language: str = "ru-RU", device_index: int | None = None) -> None:
         self.language = language
+        self.device_index = device_index
         self._recognizer = None
         self._error = ""
 
     @property
     def error(self) -> str:
-        """Последняя ошибка захвата звука или распознавания (пусто, если всё в порядке)."""
         return self._error
 
     def _ensure_recognizer(self):
@@ -21,48 +21,65 @@ class SpeechListener:
 
         recognizer = sr.Recognizer()
         recognizer.dynamic_energy_threshold = True
+        try:
+            recognizer.energy_threshold = 300
+        except Exception:
+            pass
         self._recognizer = recognizer
         return recognizer
 
-    @staticmethod
-    def _open_pyaudio_microphone():
+    def _open_pyaudio_microphone(self):
         try:
             import speech_recognition as sr
 
+            try:
+                if self.device_index is not None and self.device_index >= 0:
+                    return sr.Microphone(device_index=self.device_index)
+            except Exception:
+                pass
             return sr.Microphone()
         except Exception:
             return None
 
-    @staticmethod
-    def _open_sounddevice_microphone():
+    def _open_sounddevice_microphone(self):
         try:
+            if self.device_index is not None and self.device_index >= 0:
+                return SoundDeviceMicrophone(device=self.device_index)
             return SoundDeviceMicrophone()
         except Exception:
             return None
 
-    def listen_once(self, timeout: float | None = 5.0, phrase_limit: float = 8.0) -> str | None:
+    def listen_once(self, timeout: float | None = 6.0, phrase_limit: float = 10.0) -> str | None:
         self._error = ""
         try:
             import speech_recognition as sr
-        except ImportError:
-            self._error = "Не установлена библиотека SpeechRecognition."
+        except Exception as e:
+            self._error = f"Нет speech_recognition: {e}"
             return None
         recognizer = self._ensure_recognizer()
         for opener in (self._open_pyaudio_microphone, self._open_sounddevice_microphone):
-            source = opener()
+            try:
+                source = opener()
+            except Exception as e:
+                self._error = str(e)
+                continue
             if source is None:
                 continue
             try:
                 with source as microphone:
-                    recognizer.adjust_for_ambient_noise(microphone, duration=0.3)
-                    audio = recognizer.listen(
-                        microphone,
-                        timeout=timeout,
-                        phrase_time_limit=phrase_limit,
-                    )
-            except sr.WaitTimeoutError:
-                self._error = ""
-                return None
+                    try:
+                        recognizer.adjust_for_ambient_noise(microphone, duration=1.0)
+                    except Exception:
+                        pass
+                    try:
+                        audio = recognizer.listen(
+                            microphone,
+                            timeout=timeout,
+                            phrase_time_limit=phrase_limit,
+                        )
+                    except sr.WaitTimeoutError:
+                        self._error = ""
+                        return None
             except Exception as exc:
                 self._error = f"Микрофон недоступен: {exc}"
                 continue
@@ -75,10 +92,16 @@ class SpeechListener:
                 self._error = f"Сервис распознавания недоступен: {exc}"
                 return None
             except Exception as exc:
-                self._error = f"Не удалось распознать речь: {exc}"
+                self._error = f"Не удалось распознать: {exc}"
                 return None
             self._error = ""
             return text
         if not self._error:
-            self._error = "Микрофон недоступен: не установлен PyAudio или sounddevice."
+            self._error = "Микрофон недоступен"
         return None
+
+
+SpeechRecognizer = SpeechListener
+
+
+SpeechRecognizer = SpeechListener
