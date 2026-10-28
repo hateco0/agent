@@ -13,36 +13,51 @@ class Dashboard(ctk.CTkFrame):
         super().__init__(master)
         self.app = app
         self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(4, weight=1)
+        self.grid_rowconfigure(5, weight=1)
         self.mic_tester = None
         self.muted = False
+        self.last_cmd = "—"
 
         ctk.CTkLabel(self, text="Дашборд", font=ctk.CTkFont(size=18, weight="bold")).grid(row=0, column=0, sticky="w", padx=20, pady=(20, 10))
 
-        status_frame = ctk.CTkFrame(self)
-        status_frame.grid(row=1, column=0, sticky="ew", padx=20, pady=10)
-        status_frame.grid_columnconfigure((0, 1, 2), weight=1)
-        self.status_lbl = ctk.CTkLabel(status_frame, text="Статус агента: Остановлен")
-        self.status_lbl.grid(row=0, column=0, padx=10, pady=10, sticky="w")
-        self.mic_status = ctk.CTkLabel(status_frame, text="Микрофон: включен")
-        self.mic_status.grid(row=0, column=1, padx=10, pady=10)
-        self.ollama_status = ctk.CTkLabel(status_frame, text="Ollama: проверка...")
-        self.ollama_status.grid(row=0, column=2, padx=10, pady=10, sticky="e")
+        cards = ctk.CTkFrame(self)
+        cards.grid(row=1, column=0, sticky="ew", padx=20, pady=10)
+        cards.grid_columnconfigure((0,1,2,3), weight=1)
+        self.card_status = ctk.CTkFrame(cards)
+        self.card_status.grid(row=0, column=0, sticky="ew", padx=5)
+        ctk.CTkLabel(self.card_status, text="Статус агента", font=ctk.CTkFont(weight="bold")).pack(padx=10, pady=(5,0))
+        self.status_lbl = ctk.CTkLabel(self.card_status, text="Остановлен")
+        self.status_lbl.pack(padx=10, pady=(0,5))
+        self.card_mic = ctk.CTkFrame(cards)
+        self.card_mic.grid(row=0, column=1, sticky="ew", padx=5)
+        ctk.CTkLabel(self.card_mic, text="Микрофон", font=ctk.CTkFont(weight="bold")).pack(padx=10, pady=(5,0))
+        self.mic_status = ctk.CTkLabel(self.card_mic, text="Включен")
+        self.mic_status.pack(padx=10, pady=(0,5))
+        self.card_ollama = ctk.CTkFrame(cards)
+        self.card_ollama.grid(row=0, column=2, sticky="ew", padx=5)
+        ctk.CTkLabel(self.card_ollama, text="Ollama", font=ctk.CTkFont(weight="bold")).pack(padx=10, pady=(5,0))
+        self.ollama_status = ctk.CTkLabel(self.card_ollama, text="Проверка...")
+        self.ollama_status.pack(padx=10, pady=(0,5))
+        self.card_last = ctk.CTkFrame(cards)
+        self.card_last.grid(row=0, column=3, sticky="ew", padx=5)
+        ctk.CTkLabel(self.card_last, text="Последняя команда", font=ctk.CTkFont(weight="bold")).pack(padx=10, pady=(5,0))
+        self.last_lbl = ctk.CTkLabel(self.card_last, text="—")
+        self.last_lbl.pack(padx=10, pady=(0,5))
 
-        mic_frame = ctk.CTkFrame(self)
-        mic_frame.grid(row=2, column=0, sticky="ew", padx=20, pady=10)
-        mic_frame.grid_columnconfigure(1, weight=1)
-        ctk.CTkLabel(mic_frame, text="Микрофон", font=ctk.CTkFont(weight="bold")).grid(row=0, column=0, columnspan=3, sticky="w", padx=10, pady=5)
-        ctk.CTkLabel(mic_frame, text="Устройство:").grid(row=1, column=0, padx=10)
-        self.mic_combo = ctk.CTkComboBox(mic_frame, values=[d["name"] for d in audio_devices.list_input_devices()])
+        self.mic_frame = ctk.CTkFrame(self)
+        self.mic_frame.grid(row=2, column=0, sticky="ew", padx=20, pady=10)
+        self.mic_frame.grid_columnconfigure(1, weight=1)
+        ctk.CTkLabel(self.mic_frame, text="Микрофон", font=ctk.CTkFont(weight="bold")).grid(row=0, column=0, columnspan=3, sticky="w", padx=10, pady=5)
+        ctk.CTkLabel(self.mic_frame, text="Устройство:").grid(row=1, column=0, padx=10)
+        self.mic_combo = ctk.CTkComboBox(self.mic_frame, values=[d["name"] for d in audio_devices.list_input_devices()])
         self.mic_combo.grid(row=1, column=1, sticky="ew", padx=10)
-        self.test_mic_btn = ctk.CTkButton(mic_frame, text="Проверить микрофон", width=160, command=self.toggle_mic_test)
+        self.test_mic_btn = ctk.CTkButton(self.mic_frame, text="Проверить микрофон", width=160, command=self.toggle_mic_test)
         self.test_mic_btn.grid(row=1, column=2, padx=10)
-        ctk.CTkLabel(mic_frame, text="Уровень:").grid(row=2, column=0, padx=10, pady=5)
-        self.level_bar = ctk.CTkProgressBar(mic_frame)
+        ctk.CTkLabel(self.mic_frame, text="Уровень:").grid(row=2, column=0, padx=10, pady=5)
+        self.level_bar = ctk.CTkProgressBar(self.mic_frame)
         self.level_bar.set(0)
         self.level_bar.grid(row=2, column=1, sticky="ew", padx=10, pady=5)
-        self.mute_btn = ctk.CTkButton(mic_frame, text="Вкл/Выкл микрофон", width=160, command=self.toggle_mute)
+        self.mute_btn = ctk.CTkButton(self.mic_frame, text="Вкл/Выкл микрофон", width=160, command=self.toggle_mute)
         self.mute_btn.grid(row=2, column=2, padx=10, pady=5)
 
         ctrl_frame = ctk.CTkFrame(self)
@@ -103,12 +118,12 @@ class Dashboard(ctk.CTkFrame):
             self.mic_status.configure(text="Микрофон: включен")
 
     def start(self):
-        self.status_lbl.configure(text="Статус агента: Запущен")
+        self.status_lbl.configure(text="Запущен")
         self.start_btn.configure(state="disabled")
         self.stop_btn.configure(state="normal")
 
     def stop(self):
-        self.status_lbl.configure(text="Статус агента: Остановлен")
+        self.status_lbl.configure(text="Остановлен")
         self.start_btn.configure(state="normal")
         self.stop_btn.configure(state="disabled")
 
@@ -118,6 +133,8 @@ class Dashboard(ctk.CTkFrame):
             from voice_os_agent.core.settings import Settings
             p = IntentParser(settings=Settings.load())
             text = self.cmd_entry.get()
+            self.last_cmd = text
+            self.last_lbl.configure(text=text)
             intent = p.parse(text)
             self.result_lbl.configure(text=f"{intent.type.name} | {intent.entities}")
         except Exception as e:

@@ -28,10 +28,17 @@ def build_agent(settings: Settings, speaker=None) -> VoiceAgent:
     registry.register(ShellExecutor())
     registry.register(WindowExecutor())
     registry.register(FilesExecutor())
+    try:
+        guard = SecurityGuard(settings)
+    except Exception:
+        try:
+            guard = SecurityGuard(getattr(settings, "security", settings))
+        except Exception:
+            guard = SecurityGuard(settings)
     return VoiceAgent(
         parser=IntentParser(settings=settings),
+        guard=guard,
         registry=registry,
-        guard=SecurityGuard(settings.security),
         speaker=speaker,
     )
 

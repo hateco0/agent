@@ -26,9 +26,21 @@ class GuardVerdict:
 
 
 class SecurityGuard:
-    def __init__(self, settings: SecuritySettings) -> None:
-        self._settings = settings
-        self._whitelist = {item.lower().removesuffix(".exe") for item in settings.shell_whitelist}
+    def __init__(self, settings):
+        self.settings = settings
+        self._whitelist = set()
+        try:
+            sec = getattr(settings, "security", None)
+            if sec is None and hasattr(settings, "shell_whitelist"):
+                wl = getattr(settings, "shell_whitelist")
+            elif sec is not None:
+                wl = getattr(sec, "shell_whitelist", None)
+            else:
+                wl = None
+            if wl:
+                self._whitelist = {str(item).lower().removesuffix(".exe") for item in wl}
+        except Exception:
+            self._whitelist = set()
 
     def check(self, intent: Intent) -> GuardVerdict:
         if intent.type is IntentType.SHELL_COMMAND:

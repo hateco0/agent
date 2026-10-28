@@ -13,15 +13,16 @@ class SettingsView(ctk.CTkFrame):
         super().__init__(master)
         self.app = app
         self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(1, weight=1)
 
         ctk.CTkLabel(self, text="Настройки", font=ctk.CTkFont(size=18, weight="bold")).grid(row=0, column=0, sticky="w", padx=20, pady=(20, 10))
 
         tabs = ctk.CTkTabview(self)
         tabs.grid(row=1, column=0, sticky="nsew", padx=20, pady=10)
-        self.grid_rowconfigure(1, weight=1)
         tabs.add("Аудио")
         tabs.add("Голос")
         tabs.add("LLM")
+        tabs.add("Безопасность")
         tabs.add("Общие")
 
         # Аудио
@@ -31,10 +32,14 @@ class SettingsView(ctk.CTkFrame):
         ctk.CTkLabel(audio, text="Микрофон:").grid(row=1, column=0, padx=10, pady=5, sticky="w")
         ins = audio_devices.list_input_devices()
         self.in_combo = ctk.CTkComboBox(audio, values=[d["name"] for d in ins])
+        if ins:
+            self.in_combo.set(ins[0]["name"])
         self.in_combo.grid(row=1, column=1, sticky="ew", padx=10, pady=5)
         ctk.CTkLabel(audio, text="Устройство вывода:").grid(row=2, column=0, padx=10, pady=5, sticky="w")
         outs = audio_devices.list_output_devices()
         self.out_combo = ctk.CTkComboBox(audio, values=[d["name"] for d in outs])
+        if outs:
+            self.out_combo.set(outs[0]["name"])
         self.out_combo.grid(row=2, column=1, sticky="ew", padx=10, pady=5)
 
         # Голос
@@ -74,6 +79,18 @@ class SettingsView(ctk.CTkFrame):
         self.llm_status.grid(row=3, column=0, columnspan=2, sticky="w", padx=10, pady=5)
         ctk.CTkButton(llm, text="Проверить подключение", command=self.check_llm).grid(row=4, column=0, columnspan=2, sticky="w", padx=10, pady=5)
         self.check_llm()
+
+        # Безопасность
+        sec = tabs.tab("Безопасность")
+        sec.grid_columnconfigure(1, weight=1)
+        ctk.CTkLabel(sec, text="Безопасность", font=ctk.CTkFont(weight="bold")).grid(row=0, column=0, columnspan=2, sticky="w", padx=10, pady=5)
+        self.confirm = ctk.CTkSwitch(sec, text="Подтверждать опасные действия")
+        self.confirm.grid(row=1, column=0, columnspan=2, sticky="w", padx=10, pady=5)
+        try:
+            if getattr(getattr(self.app.settings, "security", None), "confirm_dangerous", True):
+                self.confirm.select()
+        except Exception:
+            self.confirm.select()
 
         # Общие
         gen = tabs.tab("Общие")

@@ -1,9 +1,13 @@
 from __future__ import annotations
 
-import customtkinter as ctk
-from tkinter import ttk
+import os
+import subprocess
+import tkinter as tk
+from tkinter import messagebox, ttk
 
-from core import db
+import customtkinter as ctk
+
+LOG_FILE = os.path.join("data", "agent_debug.log")
 
 
 class LogsView(ctk.CTkFrame):
@@ -15,29 +19,66 @@ class LogsView(ctk.CTkFrame):
 
         ctk.CTkLabel(self, text="Логи", font=ctk.CTkFont(size=16, weight="bold")).grid(row=0, column=0, sticky="w", padx=20, pady=(20, 10))
 
+        btns = ctk.CTkFrame(self)
+        btns.grid(row=0, column=0, sticky="e", padx=20, pady=(20, 10))
+        ctk.CTkButton(btns, text="Обновить", width=90, command=self.refresh).grid(row=0, column=0, padx=2)
+        ctk.CTkButton(btns, text="Открыть файл", width=110, command=self.open_log).grid(row=0, column=1, padx=2)
+        ctk.CTkButton(btns, text="Копировать последние 100", width=190, command=self.copy_last).grid(row=0, column=2, padx=2)
+
         frame = ctk.CTkFrame(self)
         frame.grid(row=1, column=0, sticky="nsew", padx=20, pady=10)
         frame.grid_columnconfigure(0, weight=1)
         frame.grid_rowconfigure(0, weight=1)
 
-        columns = ("time", "level", "message")
-        self.tree = ttk.Treeview(frame, columns=columns, show="headings")
-        self.tree.heading("time", text="Время")
-        self.tree.heading("level", text="Уровень")
-        self.tree.heading("message", text="Сообщение")
-        self.tree.column("time", width=80)
-        self.tree.column("level", width=80)
-        self.tree.column("message", width=700)
-        self.tree.grid(row=0, column=0, sticky="nsew")
-        scrollbar = ttk.Scrollbar(frame, orient="vertical", command=self.tree.yview)
+        self.text = tk.Text(frame, wrap="word", bg="#1e1e1e", fg="#d4d4d4", insertbackground="white")
+        self.text.grid(row=0, column=0, sticky="nsew")
+        scrollbar = ttk.Scrollbar(frame, orient="vertical", command=self.text.yview)
         scrollbar.grid(row=0, column=1, sticky="ns")
-        self.tree.configure(yscrollcommand=scrollbar.set)
-
-        ctk.CTkButton(self, text="Обновить", command=self.refresh).grid(row=2, column=0, sticky="e", padx=20, pady=10)
+        self.text.configure(yscrollcommand=scrollbar.set)
         self.refresh()
+        self.after(2000, self.auto_refresh)
 
-    def refresh(self) -> None:
-        for item in self.tree.get_children():
-            self.tree.delete(item)
-        for row in db.db.get_logs():
-            self.tree.insert("", "end", values=(row["ts"], row["level"], row["message"]))
+    def read_log(self):
+        try:
+            if not os.path.exists(LOG_FILE):
+                return "Лог-файл не найден: data/agent_debug.log"
+            with open(LOG_FILE, "r", encoding="utf-8", errors="ignore") as f:
+                lines = f.readlines()
+            return "".join(lines[-200:])
+        except Exception as e:
+            return f"Ошибка чтения лога: {e}"
+
+    def refresh(self):
+        try:
+            self.text.delete("1.0", "end")
+            self.text.insert("1.0", self.read_log())
+            self.text.see("end")
+        except Exception:
+            pass
+
+    def auto_refresh(self):
+        try:
+            self.refresh()
+        except Exception:
+            pass
+        self.after(2000, self.auto_refresh)
+
+    def open_log(self):
+        try:
+            os.startfile(os.path.abspath(LOG_FILE))
+        except Exception as e:
+            messagebox.showerror("Ошибка", str(e))
+
+    def copy_last(self):
+        try:
+            if not os.path.exists(LOG_FILE):
+                return
+            with open(LOG_FILE, "r", encoding="utf-8", errors="ignore") as f:
+                lines = f.readlines()
+            txt = "".join(lines[-100:])
+            self.clipboard_clear()
+            self.clipboard_append(txt)
+            messagebox.showinfo("Логи", "Скопировано последние 100 строк")
+        except Exception as e:
+            messagebox.showerror("Ошибка", str(e))
+

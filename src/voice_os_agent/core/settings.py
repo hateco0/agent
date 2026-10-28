@@ -62,20 +62,26 @@ class Settings:
     def load(cls, path: Path = CONFIG_PATH) -> "Settings":
         if not path.exists():
             s = cls()
-            s.save(path)
+            try:
+                s.save(path)
+            except Exception:
+                pass
             return s
         try:
-            data = json.loads(path.read_text(encoding="utf-8"))
+            raw = path.read_text(encoding="utf-8")
+            data = json.loads(raw)
+            if not isinstance(data, dict):
+                return cls()
             s = cls()
-            if "audio" in data and isinstance(data["audio"], dict):
+            if isinstance(data.get("audio"), dict):
                 s.audio = AudioSettings(**{k: v for k, v in data["audio"].items() if k in AudioSettings.__dataclass_fields__})
-            if "llm" in data and isinstance(data["llm"], dict):
+            if isinstance(data.get("llm"), dict):
                 s.llm = LLMSettings(**{k: v for k, v in data["llm"].items() if k in LLMSettings.__dataclass_fields__})
-            if "voice" in data and isinstance(data["voice"], dict):
+            if isinstance(data.get("voice"), dict):
                 s.voice = VoiceSettings(**{k: v for k, v in data["voice"].items() if k in VoiceSettings.__dataclass_fields__})
-            if "security" in data and isinstance(data["security"], dict):
+            if isinstance(data.get("security"), dict):
                 s.security = SecuritySettings(**{k: v for k, v in data["security"].items() if k in SecuritySettings.__dataclass_fields__})
-            if "behavior" in data and isinstance(data["behavior"], dict):
+            if isinstance(data.get("behavior"), dict):
                 s.behavior = BehaviorSettings(**{k: v for k, v in data["behavior"].items() if k in BehaviorSettings.__dataclass_fields__})
             s.locale = data.get("locale", s.locale)
             s.theme = data.get("theme", s.theme)
