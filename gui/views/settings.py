@@ -43,6 +43,7 @@ class SettingsView(ctk.CTkFrame):
             if ins:
                 self.in_combo.set(ins[0]["name"])
         self.in_combo.grid(row=1, column=1, sticky="ew", padx=10, pady=5)
+        ctk.CTkButton(audio, text="Обновить", width=80, command=self.refresh_audio).grid(row=1, column=2, padx=10)
         ctk.CTkLabel(audio, text="Устройство вывода:").grid(row=2, column=0, padx=10, pady=5, sticky="w")
         outs = audio_devices.list_output_devices()
         self.out_combo = ctk.CTkComboBox(audio, values=[d["name"] for d in outs])
@@ -57,6 +58,7 @@ class SettingsView(ctk.CTkFrame):
             if outs:
                 self.out_combo.set(outs[0]["name"])
         self.out_combo.grid(row=2, column=1, sticky="ew", padx=10, pady=5)
+        ctk.CTkButton(audio, text="Обновить", width=80, command=self.refresh_audio).grid(row=2, column=2, padx=10)
 
         # Голос
         voice = tabs.tab("Голос")
