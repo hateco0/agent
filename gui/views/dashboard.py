@@ -165,15 +165,81 @@ class Dashboard(ctk.CTkFrame):
         self.start_btn.configure(state="disabled")
         self.stop_btn.configure(state="normal")
         try:
-            if hasattr(self.app, "frames") and "Dashboard" in self.app.frames:
+            from voice_os_agent.app import build_agent
+            from voice_os_agent.core.settings import Settings
+            self.app.agent = build_agent(Settings.load())
+            self._voice_thread = None
+            import threading
+            self._stop_voice = False
+            def _loop():
+                try:
+                    from voice_os_agent.voice.asr import SpeechListener
+                    from voice_os_agent.voice.wake_word import WakeWordDetector
+                    from core import logging_setup
+                    s = Settings.load()
+                    wake = getattr(getattr(s, "voice", None), "wake_word", "ассистент") or "ассистент"
+                    name = self.mic_combo.get() if hasattr(self, "mic_combo") else None
+                    try:
+                        ins = audio_devices.list_input_devices()
+                        idx = None
+                        for d in ins:
+                            if d["name"] == name:
+                                idx = d["index"]
+                                break
+                    except Exception:
+                        idx = None
+                    lst = SpeechListener(language="ru-RU", device_name=name)
+                    det = WakeWordDetector(keyword=wake, listener=lst)
+                    logging_setup.log.info(f"VOICE_LOOP_START wake={wake} mic={name}")
+                    while not getattr(self, "_stop_voice", False):
+                        try:
+                            heard = lst.listen_once(timeout=None, phrase_limit=4.0)
+                            if not heard:
+                                continue
+                            if not det.contains_wake(heard):
+                                continue
+                            logging_setup.log.info(f"VOICE_WAKE: {heard}")
+                            cmd = det.strip_wake(heard)
+                            if not cmd:
+                                cmd = lst.listen_once(timeout=6.0, phrase_limit=10.0) or ""
+                                cmd = cmd.strip()
+                            if not cmd:
+                                continue
+                            logging_setup.log.info(f"VOICE_CMD: {cmd}")
+                            res = self.app.agent.handle(cmd)
+                            logging_setup.log.info(f"VOICE_RES: {getattr(res,'message','')}")
+                            try:
+                                self.after(0, lambda m=getattr(res,'message',''): self.result_lbl.configure(text=m))
+                            except Exception:
+                                pass
+                        except Exception as e:
+                            logging_setup.log.exception(f"VOICE_LOOP_ERR: {e}")
+                            import time
+                            time.sleep(1)
+                except Exception as e:
+                    try:
+                        from core import logging_setup
+                        logging_setup.log.exception(f"VOICE_INIT_ERR: {e}")
+                    except Exception:
+                        pass
+            t = threading.Thread(target=_loop, daemon=True)
+            self._voice_thread = t
+            t.start()
+        except Exception as e:
+            try:
+                from core import logging_setup
+                logging_setup.log.exception(f"GUI_START_ERR: {e}")
+            except Exception:
                 pass
-        except Exception:
-            pass
 
     def stop(self):
         try:
             from core import logging_setup
             logging_setup.log.info("GUI_AGENT_STOP")
+        except Exception:
+            pass
+        try:
+            self._stop_voice = True
         except Exception:
             pass
         self.status_lbl.configure(text="Остановлен")
