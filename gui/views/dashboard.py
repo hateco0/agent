@@ -95,7 +95,7 @@ class Dashboard(ctk.CTkFrame):
         self.check_ollama()
 
     def toggle_mic_test(self):
-        if self.mic_tester and self.mic_tester.running:
+        if getattr(self, "mic_tester", None) and getattr(self.mic_tester, "running", False):
             try:
                 self.mic_tester.stop()
             except Exception:
@@ -103,6 +103,11 @@ class Dashboard(ctk.CTkFrame):
             self.mic_tester = None
             self.test_mic_btn.configure(text="Проверить микрофон")
             self.level_bar.set(0)
+            try:
+                from core import logging_setup
+                logging_setup.log.info("MIC_TEST_STOP")
+            except Exception:
+                pass
             return
         try:
             devs = audio_devices.list_input_devices()
@@ -112,11 +117,29 @@ class Dashboard(ctk.CTkFrame):
                 if d["name"] == name:
                     dev_idx = d["index"]
                     break
-            self.mic_tester = MicTester(device=dev_idx, callback=self._on_level)
-            self.mic_tester.start()
-            self.test_mic_btn.configure(text="Остановить тест микрофона")
+            enable_mon = True
+            try:
+                if hasattr(self, "monitor_var"):
+                    enable_mon = self.monitor_var.get() == "on"
+            except Exception:
+                enable_mon = True
+            self.mic_tester = MicTester(device=dev_idx, device_name=name, on_level=self._on_level, callback=self._on_level, enable_monitor=enable_mon)
+            if self.mic_tester.start():
+                self.test_mic_btn.configure(text="Остановить тест микрофона")
+                try:
+                    from core import logging_setup
+                    logging_setup.log.info(f"MIC_TEST_START name={name} idx={dev_idx} mon={enable_mon}")
+                except Exception:
+                    pass
+            else:
+                self.result_lbl.configure(text="Не удалось запустить тест микрофона")
         except Exception as e:
             self.result_lbl.configure(text=f"Ошибка теста микрофона: {e}")
+            try:
+                from core import logging_setup
+                logging_setup.log.exception(f"MIC_TEST_ERR: {e}")
+            except Exception:
+                pass
 
     def _on_level(self, rms: float):
         try:
@@ -133,27 +156,60 @@ class Dashboard(ctk.CTkFrame):
             self.mic_status.configure(text="Микрофон: включен")
 
     def start(self):
+        try:
+            from core import logging_setup
+            logging_setup.log.info("GUI_AGENT_START")
+        except Exception:
+            pass
         self.status_lbl.configure(text="Запущен")
         self.start_btn.configure(state="disabled")
         self.stop_btn.configure(state="normal")
+        try:
+            if hasattr(self.app, "frames") and "Dashboard" in self.app.frames:
+                pass
+        except Exception:
+            pass
 
     def stop(self):
+        try:
+            from core import logging_setup
+            logging_setup.log.info("GUI_AGENT_STOP")
+        except Exception:
+            pass
         self.status_lbl.configure(text="Остановлен")
         self.start_btn.configure(state="normal")
         self.stop_btn.configure(state="disabled")
 
     def run_cmd(self):
         try:
-            from voice_os_agent.nlu.parser import IntentParser
+            from core import logging_setup
+            logging_setup.log.info(f"GUI_CMD: {self.cmd_entry.get()}")
+        except Exception:
+            pass
+        try:
+            from voice_os_agent.app import build_agent
             from voice_os_agent.core.settings import Settings
-            p = IntentParser(settings=Settings.load())
+            a = build_agent(Settings.load())
             text = self.cmd_entry.get()
             self.last_cmd = text
-            self.last_lbl.configure(text=text)
-            intent = p.parse(text)
-            self.result_lbl.configure(text=f"{intent.type.name} | {intent.entities}")
+            try:
+                self.last_lbl.configure(text=text)
+            except Exception:
+                pass
+            res = a.handle(text)
+            self.result_lbl.configure(text=f"{getattr(res,'message','')}")
+            try:
+                from core import logging_setup
+                logging_setup.log.info(f"GUI_CMD_RES: {getattr(res,'message','')}")
+            except Exception:
+                pass
         except Exception as e:
             self.result_lbl.configure(text=f"Ошибка: {e}")
+            try:
+                from core import logging_setup
+                logging_setup.log.exception(f"GUI_CMD_ERR: {e}")
+            except Exception:
+                pass
 
     def check_ollama(self):
         try:
